@@ -1,4 +1,4 @@
-import { AudioPlayer, AudioPlayerStatus, createAudioPlayer, entersState, VoiceConnection, VoiceConnectionDisconnectReason, VoiceConnectionStatus } from '@discordjs/voice';
+import { AudioPlayer, AudioPlayerState, AudioPlayerStatus, AudioResource, createAudioPlayer, entersState, VoiceConnection, VoiceConnectionDisconnectReason, VoiceConnectionStatus } from '@discordjs/voice';
 import { promisify } from 'node:util'
 import { Track } from './track';
 const wait = promisify(setTimeout);
@@ -73,11 +73,17 @@ export class Subscription {
 
 
         // Configure audio player
-		this.audioPlayer.on('stateChange', (oldState: { status: any; resource: any; }, newState: { status: any; resource: any; }) => {
+		this.audioPlayer.on('stateChange', async (oldState: AudioPlayerState, newState: AudioPlayerState) => {
 			if (newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle) {
 				// If the Idle state is entered from a non-Idle state, it means that an audio resource has finished playing.
 				// The queue is then processed to start playing the next track, if one is available.
 				// (oldState.resource as AudioResource<Track>).metadata.onFinish();
+				if (this.loop && oldState.status === AudioPlayerStatus.Playing) {
+					const resource = oldState.resource as AudioResource<Track>;
+					const track = await Track.from(resource.metadata.title);
+					this.queue = [track];
+					// console.log(this.queue);
+				}
 				void this.processQueue();
 			} 
 		});
@@ -120,13 +126,9 @@ export class Subscription {
         this.queueLock = true;
 
         //remove and store first track in queue
-		let nextTrack;
-		if (this.loop) {
-			nextTrack = this.queue[0];
-		}
-        else {
-			nextTrack = this.queue.shift()!;
-		}
+		
+		const nextTrack = this.queue.shift()!;
+		
         try {
             const resource = await nextTrack.createAudioResource();
             this.audioPlayer.play(resource);
