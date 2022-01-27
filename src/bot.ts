@@ -4,6 +4,9 @@ import { AudioPlayerStatus, AudioResource, entersState, joinVoiceChannel, VoiceC
 import { Client, GuildMember, Intents, Snowflake, TextChannel } from 'discord.js';
 import { Subscription } from './classes/subscription';
 import { Track } from './classes/track';
+import SpotifyWebApi from "spotify-web-api-node";
+import { spoiler } from '@discordjs/builders';
+
 const myIntents = new Intents();
 myIntents.add(
     Intents.FLAGS.GUILDS,
@@ -13,6 +16,16 @@ myIntents.add(
     );
 
 const client = new Client({intents: myIntents});
+const spotify = new SpotifyWebApi({
+    clientId: process.env.SPOTIFY_ID,
+    clientSecret: process.env.SPOTIFY_SECRET
+})
+// get access token
+spotify.clientCredentialsGrant().then(
+    (data) => {
+        spotify.setAccessToken(data.body['access_token'])
+    }
+)
 
 const prefix = ".";
 client.on('ready', () => {
@@ -115,6 +128,17 @@ async function loopCommand(textChannel, subscription: Subscription) {
     subscription.loop = !subscription.loop;
     await textChannel.send(`Repeat is now ${subscription.loop ? "On" : "Off"}`)
 }
+async function playListCommand(url: string, textChannel, subscription: Subscription) {
+    const id = url.match(/[-\w]{20,}/)[0];
+    // const id = "5U4W9E5WsYb2jUQWePT8Xm";
+    // console.log(url);
+    console.log(id);
+    spotify.getPlaylistTracks(id).then((data) => {
+        console.log(data.body);
+    }, (err) => {
+        console.error(err);
+    })
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
@@ -140,6 +164,9 @@ client.on("messageCreate", async (message) => {
                 break;
             case "leave":
                 leaveCommand(message.channel as TextChannel, subscription);
+                break;
+            case "playlist": 
+                playListCommand(args[0], message.channel, subscription);
                 break;
             case "repeat": 
                 loopCommand(message.channel, subscription);
@@ -173,6 +200,10 @@ client.on("messageCreate", async (message) => {
                     {
                         name: "repeat",
                         description: "toggles the repeat"
+                    },
+                    {
+                        name: "playlist",
+                        description: "adds spotify playlist with given url to queue"
                     },
                     {
                         name: "help",
