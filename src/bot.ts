@@ -5,7 +5,6 @@ import { Client, GuildMember, Intents, Snowflake, TextChannel } from 'discord.js
 import { Subscription } from './classes/subscription';
 import { Track } from './classes/track';
 import SpotifyWebApi from "spotify-web-api-node";
-import { spoiler } from '@discordjs/builders';
 
 const myIntents = new Intents();
 myIntents.add(
@@ -93,7 +92,7 @@ async function queueCommand(textChannel, subscription: Subscription) {
                 .slice(0, 5)
                 .map((track, index) => `${index + 1}) ${track.title}`)
                 .join("\n")
-        console.log(queue);
+        // console.log(queue);
         await textChannel.send(`${current}\n\n${queue}`);
     } else {
         await textChannel.send("I am currently not playing anything.")
@@ -128,15 +127,59 @@ async function loopCommand(textChannel, subscription: Subscription) {
     subscription.loop = !subscription.loop;
     await textChannel.send(`Repeat is now ${subscription.loop ? "On" : "Off"}`)
 }
-async function playListCommand(url: string, textChannel, subscription: Subscription) {
+async function playListCommand(url: string, member, textChannel, subscription: Subscription) {
+    if (!subscription) {
+        if (member instanceof GuildMember && member.voice.channel) {
+            const channel = member.voice.channel;
+            subscription = new Subscription(
+                joinVoiceChannel({
+                    channelId: channel.id,
+                    guildId: channel.guildId,
+                    adapterCreator: channel.guild.voiceAdapterCreator
+                })
+            );
+            subscription.voiceConnection.on("error", console.warn);
+            subscriptions.set(channel.guildId, subscription);
+        }
+    }
+    if (!subscription) {
+        await textChannel.send("Please join a voice channel!");
+        return;
+    }
+
+    try {
+        await entersState(subscription.voiceConnection, VoiceConnectionStatus.Ready, 20e3);
+    } catch (error) {
+        console.warn(error);
+        await textChannel.send("Failed to join the voice channel");
+        return;
+    }
     const id = url.match(/[-\w]{20,}/)[0];
-    // const id = "5U4W9E5WsYb2jUQWePT8Xm";
-    // console.log(url);
-    console.log(id);
+ 
     spotify.getPlaylistTracks(id).then((data) => {
-        console.log(data.body);
+
+        data.body.items.forEach(async (item) => {
+            const artistsList = [];
+            item.track.artists.forEach((artist) => {
+                artistsList.push(artist.name);
+            })
+            const query = `${item.track.name} ${artistsList.join(", ")}`
+            try {
+                const track = await Track.from(query);
+                subscription.enqueue(track);
+            } catch (error) {
+                await textChannel.send(`Failed to play ${item.track.name}`);
+                console.error(error);
+            }
+        })
     }, (err) => {
         console.error(err);
+
+    }).catch((err) => {
+        console.error(err);
+        textChannel.send("An error occured, maybe the link is incorrect?");
+    }).then(async () => {
+        await textChannel.send(`Successfully added playlist`)
     })
 }
 client.on("messageCreate", async (message) => {
@@ -166,7 +209,7 @@ client.on("messageCreate", async (message) => {
                 leaveCommand(message.channel as TextChannel, subscription);
                 break;
             case "playlist": 
-                playListCommand(args[0], message.channel, subscription);
+                playListCommand(args[0], message.member, message.channel, subscription);
                 break;
             case "repeat": 
                 loopCommand(message.channel, subscription);

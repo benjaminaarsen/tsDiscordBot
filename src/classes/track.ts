@@ -34,7 +34,8 @@ export class Track implements TrackData{
                 "snippet"
             ],
             maxResults: 1,
-            q: query
+            q: query,
+            order: "viewCount"
         }).then((res) => {
             return {
                 title: res.data.items[0].snippet.title,
