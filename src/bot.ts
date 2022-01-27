@@ -111,8 +111,9 @@ async function leaveCommand(textChannel: TextChannel, subscription: Subscription
         await textChannel.send("I am currently not in a voice channel.")
     }
 }
-async function loopCommand(subscription: Subscription) {
+async function loopCommand(textChannel, subscription: Subscription) {
     subscription.loop = !subscription.loop;
+    await textChannel.send(`Repeat is now ${subscription.loop ? "On" : "Off"}`)
 }
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
@@ -141,7 +142,7 @@ client.on("messageCreate", async (message) => {
                 leaveCommand(message.channel as TextChannel, subscription);
                 break;
             case "repeat": 
-                loopCommand(subscription);
+                loopCommand(message.channel, subscription);
                 break;
             case "help": 
                 const commands = [
@@ -168,6 +169,10 @@ client.on("messageCreate", async (message) => {
                     {
                         name: "leave",
                         description: "leaves the voice channel"
+                    },
+                    {
+                        name: "repeat",
+                        description: "toggles the repeat"
                     },
                     {
                         name: "help",
