@@ -1,4 +1,4 @@
-import { AudioPlayer, AudioPlayerStatus, AudioResource, createAudioPlayer, entersState, VoiceConnection, VoiceConnectionDisconnectReason, VoiceConnectionStatus } from '@discordjs/voice';
+import { AudioPlayer, AudioPlayerStatus, createAudioPlayer, entersState, VoiceConnection, VoiceConnectionDisconnectReason, VoiceConnectionStatus } from '@discordjs/voice';
 import { promisify } from 'node:util'
 import { Track } from './track';
 const wait = promisify(setTimeout);
@@ -10,6 +10,7 @@ export class Subscription {
 	public queue: Track[];
 	public queueLock = false;
 	public readyLock = false;
+	public loop = false;
 
     public constructor(voiceConnection: VoiceConnection) {
         this.voiceConnection = voiceConnection;
@@ -112,15 +113,20 @@ export class Subscription {
      */
     private async processQueue(): Promise<void> {
         if (this.queueLock || this.audioPlayer.state.status !== AudioPlayerStatus.Idle || this.queue.length === 0) {
-            return
+            return;
         }
 
         // lock queue because we are going to edit it
         this.queueLock = true;
 
         //remove and store first track in queue
-        const nextTrack = this.queue.shift()!;
-        
+		let nextTrack;
+		if (this.loop) {
+			nextTrack = this.queue[0];
+		}
+        else {
+			nextTrack = this.queue.shift()!;
+		}
         try {
             const resource = await nextTrack.createAudioResource();
             this.audioPlayer.play(resource);

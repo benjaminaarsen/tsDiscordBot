@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 import { AudioPlayerStatus, AudioResource, entersState, joinVoiceChannel, VoiceConnectionStatus } from '@discordjs/voice';
-import { Client, GuildMember, Intents, Message, Snowflake, TextChannel, User } from 'discord.js';
+import { Client, GuildMember, Intents, Snowflake, TextChannel } from 'discord.js';
 import { Subscription } from './classes/subscription';
 import { Track } from './classes/track';
 const myIntents = new Intents();
@@ -111,6 +111,9 @@ async function leaveCommand(textChannel: TextChannel, subscription: Subscription
         await textChannel.send("I am currently not in a voice channel.")
     }
 }
+async function loopCommand(subscription: Subscription) {
+    subscription.loop = !subscription.loop;
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
@@ -136,6 +139,9 @@ client.on("messageCreate", async (message) => {
                 break;
             case "leave":
                 leaveCommand(message.channel as TextChannel, subscription);
+                break;
+            case "repeat": 
+                loopCommand(subscription);
                 break;
             case "help": 
                 const commands = [
@@ -173,7 +179,7 @@ client.on("messageCreate", async (message) => {
                     msg += `${cmd.name}:\n${cmd.description}\n\n`
                 })
                 await message.channel.send(msg);
-
+                break;
         }
     }
 })
