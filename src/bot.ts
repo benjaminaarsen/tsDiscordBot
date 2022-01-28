@@ -211,6 +211,10 @@ async function playListCommand(url: string, member, textChannel, subscription: S
         await textChannel.send(`Successfully added playlist`)
     })
 }
+async function clearCommand(textChannel, subscription: Subscription) {
+    subscription.queue = [];
+    await textChannel.send("The queue has been cleared");
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
@@ -228,6 +232,8 @@ client.on("messageCreate", async (message) => {
             case "queue":
                 queueCommand(message.channel, subscription);
                 break;
+            case "clear":
+                
             case "pause":
                 pauseCommand(message.channel, subscription);
                 break;
@@ -256,6 +262,10 @@ client.on("messageCreate", async (message) => {
                     {
                         name: "queue",
                         description: "Displays current and upcoming songs"
+                    },
+                    {
+                        name: "clear",
+                        description: "clears the queue"
                     },
                     {
                         name: "pause",
