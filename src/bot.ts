@@ -207,7 +207,7 @@ async function playListCommand(url: string, member, textChannel, subscription: S
             item.track.artists.forEach((artist) => {
                 artistsList.push(artist.name);
             })
-            const query = `${item.track.name} ${artistsList.join(", ")}`
+            const query = `${artistsList.join(", ")} ${item.track.name} `
             try {
                 const track = await Track.from(query);
                 subscription.enqueue(track);
