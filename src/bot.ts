@@ -29,6 +29,20 @@ spotify.clientCredentialsGrant().then(
 const prefix = ".";
 client.on('ready', () => {
     console.log(`${client.user.username} has logged in`);
+    const subscriptionLoop = setInterval(async () => {
+        subscriptions.forEach((s, k) => {
+            if (s.voiceConnection.state.status === VoiceConnectionStatus.Destroyed) {
+                subscriptions.delete(k)
+            }
+        })
+    }, 10000);
+    const refreshAccessToken = setInterval(async () => {
+        spotify.clientCredentialsGrant().then(
+            (data) => {
+                spotify.setAccessToken(data.body['access_token'])
+            }
+        )
+    }, 3600000);
 });
 
 const subscriptions = new Map<Snowflake, Subscription>();
@@ -124,8 +138,23 @@ async function leaveCommand(textChannel: TextChannel, subscription: Subscription
     }
 }
 async function loopCommand(textChannel, subscription: Subscription) {
-    subscription.loop = !subscription.loop;
-    await textChannel.send(`Repeat is now ${subscription.loop ? "On" : "Off"}`)
+    try {
+        if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+            subscription.loop = !subscription.loop;
+            if (subscription.loop) {
+                const resource = subscription.audioPlayer.state.resource as AudioResource<Track>;
+                const track = await Track.from(resource.metadata.title);
+                subscription.enqueue(track);
+            }
+            await textChannel.send(`Repeat is now ${subscription.loop ? "On" : "Off"}`)
+        } else {
+            await textChannel.send("I am currently not playing anything")
+        }
+    } catch (error) {
+        if (error instanceof TypeError) await textChannel.send("Error: I am currently not playing anything")
+    }
+   
+   
 }
 async function playListCommand(url: string, member, textChannel, subscription: Subscription) {
     if (!subscription) {
@@ -242,7 +271,7 @@ client.on("messageCreate", async (message) => {
                     },
                     {
                         name: "repeat",
-                        description: "toggles the repeat"
+                        description: "toggles the repeat (repeats queue)"
                     },
                     {
                         name: "playlist",
@@ -262,4 +291,4 @@ client.on("messageCreate", async (message) => {
         }
     }
 })
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TEST_TOKEN);
