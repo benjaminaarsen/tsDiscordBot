@@ -47,6 +47,14 @@ client.on('ready', () => {
 
 const subscriptions = new Map<Snowflake, Subscription>();
 
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
 async function playCommand(member, textChannel, args: string[], subscription: Subscription) {
     console.log("Play command triggered");
     if (!subscription) {
@@ -183,7 +191,14 @@ async function playListCommand(url: string, member, textChannel, subscription: S
         await textChannel.send("Failed to join the voice channel");
         return;
     }
-    const id = url.match(/[-\w]{20,}/)[0];
+    const match = url.match(/[-\w]{20,}/);
+    let id: string;
+    if (match) {
+        id = match[0];
+    } else {
+        await textChannel.send("Invalid url");
+        return;
+    }
  
     spotify.getPlaylistTracks(id).then((data) => {
 
@@ -211,9 +226,16 @@ async function playListCommand(url: string, member, textChannel, subscription: S
         await textChannel.send(`Successfully added playlist`)
     })
 }
+<<<<<<< HEAD
 async function clearCommand(textChannel, subscription: Subscription) {
     subscription.queue = [];
     await textChannel.send("The queue has been cleared");
+=======
+async function shuffleCommand(textChannel, subscription: Subscription) {
+    const newQueue = shuffleArray(subscription.queue);
+    subscription.queue = newQueue;
+    await textChannel.send("Shuffled the queue!");
+>>>>>>> 3a5f009c43c8127fec317baf43a54fe33fd97a90
 }
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
@@ -248,6 +270,9 @@ client.on("messageCreate", async (message) => {
                 break;
             case "repeat": 
                 loopCommand(message.channel, subscription);
+                break;
+            case "shuffle":
+                shuffleCommand(message.channel, subscription);
                 break;
             case "help": 
                 const commands = [

@@ -77,7 +77,9 @@ export class Subscription {
 				// If the Idle state is entered from a non-Idle state, it means that an audio resource has finished playing.
 				// The queue is then processed to start playing the next track, if one is available.
 				// (oldState.resource as AudioResource<Track>).metadata.onFinish();
-				this.timeout = setTimeout(()=>{this.voiceConnection.destroy(); this.stop()}, 20000);
+				if (this.voiceConnection.state.status !== VoiceConnectionStatus.Destroyed) {
+					this.timeout = setTimeout(()=>{this.voiceConnection.destroy(); this.stop()}, 20000);
+				}
 				if (this.loop && oldState.status === AudioPlayerStatus.Playing && this.queue.length === 0) {
 					const resource = oldState.resource as AudioResource<Track>;
 					const track = await Track.from(resource.metadata.title);
