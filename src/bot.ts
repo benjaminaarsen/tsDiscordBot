@@ -45,6 +45,24 @@ client.on('ready', () => {
     }, 3600000);
 });
 
+client.on("voiceStateUpdate", (oldState, newState) => {
+    //if leave
+    if (oldState.channel && !newState.channel) {
+        if (oldState.channel.members.size === 1) {
+            const subscription = subscriptions.get(oldState.guild.id)
+            if (subscription) {
+                subscription.voiceConnection.destroy();
+                subscriptions.delete(oldState.guild.id);
+            }
+           
+        }
+    }
+    
+
+    // if (newState.channel.members.keys.length === 0) {
+    //     newState.disconnect();
+    // }
+})
 const subscriptions = new Map<Snowflake, Subscription>();
 
 function shuffleArray(array) {
@@ -235,6 +253,14 @@ async function shuffleCommand(textChannel, subscription: Subscription) {
     subscription.queue = newQueue;
     await textChannel.send("Shuffled the queue!");
 }
+async function nowPlayingCommand(textChannel, subscription: Subscription) {
+    //if there is something playing
+    if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+        await textChannel.send(`Currenty playing ${(subscription.audioPlayer.state.resource as AudioResource<Track>).metadata.title}`)
+    } else {
+        await textChannel.send("Currently not playing anything.");
+    }
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
@@ -273,11 +299,18 @@ client.on("messageCreate", async (message) => {
             case "shuffle":
                 shuffleCommand(message.channel, subscription);
                 break;
+            case "nowplaying":
+                nowPlayingCommand(message.channel, subscription);
+                break;
             case "help": 
                 const commands = [
                     {
                         name: "play",
                         description: "Plays music from given url / keywords"
+                    },
+                    {
+                        name: "nowplaying",
+                        description: "Displays the song that's currently playing"
                     },
                     {
                         name: "skip",
@@ -310,6 +343,10 @@ client.on("messageCreate", async (message) => {
                     {
                         name: "playlist",
                         description: "adds spotify playlist with given url to queue"
+                    },
+                    {
+                        name: "shuffle",
+                        description: "shuffles the queue"
                     },
                     {
                         name: "help",
