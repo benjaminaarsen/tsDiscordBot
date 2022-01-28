@@ -7,15 +7,14 @@ const wait = promisify(setTimeout);
 export class Subscription {
     public readonly voiceConnection: VoiceConnection;
 	public readonly audioPlayer: AudioPlayer;
-	public queue: Track[];
+	public queue: Track[] = [];
 	public queueLock = false;
 	public readyLock = false;
 	public loop = false;
-
+	public timeout: NodeJS.Timeout;
     public constructor(voiceConnection: VoiceConnection) {
         this.voiceConnection = voiceConnection;
         this.audioPlayer = createAudioPlayer();
-        this.queue = [];
 
         this.voiceConnection.on('stateChange', async (_: any, newState: { status: any; reason: any; closeCode: number; }) => {
 			if (newState.status === VoiceConnectionStatus.Disconnected) {
@@ -78,6 +77,7 @@ export class Subscription {
 				// If the Idle state is entered from a non-Idle state, it means that an audio resource has finished playing.
 				// The queue is then processed to start playing the next track, if one is available.
 				// (oldState.resource as AudioResource<Track>).metadata.onFinish();
+				this.timeout = setTimeout(()=>{this.voiceConnection.destroy(); this.stop()}, 20000);
 				if (this.loop && oldState.status === AudioPlayerStatus.Playing) {
 					const resource = oldState.resource as AudioResource<Track>;
 					const track = await Track.from(resource.metadata.title);
@@ -121,7 +121,7 @@ export class Subscription {
         if (this.queueLock || this.audioPlayer.state.status !== AudioPlayerStatus.Idle || this.queue.length === 0) {
             return;
         }
-
+		clearTimeout(this.timeout);
         // lock queue because we are going to edit it
         this.queueLock = true;
 
