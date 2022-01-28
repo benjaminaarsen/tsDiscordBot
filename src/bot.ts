@@ -226,16 +226,14 @@ async function playListCommand(url: string, member, textChannel, subscription: S
         await textChannel.send(`Successfully added playlist`)
     })
 }
-<<<<<<< HEAD
 async function clearCommand(textChannel, subscription: Subscription) {
     subscription.queue = [];
     await textChannel.send("The queue has been cleared");
-=======
+}
 async function shuffleCommand(textChannel, subscription: Subscription) {
     const newQueue = shuffleArray(subscription.queue);
     subscription.queue = newQueue;
     await textChannel.send("Shuffled the queue!");
->>>>>>> 3a5f009c43c8127fec317baf43a54fe33fd97a90
 }
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
@@ -255,7 +253,8 @@ client.on("messageCreate", async (message) => {
                 queueCommand(message.channel, subscription);
                 break;
             case "clear":
-                
+                clearCommand(message.channel, subscription);
+                break;
             case "pause":
                 pauseCommand(message.channel, subscription);
                 break;
