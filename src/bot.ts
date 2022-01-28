@@ -183,7 +183,14 @@ async function playListCommand(url: string, member, textChannel, subscription: S
         await textChannel.send("Failed to join the voice channel");
         return;
     }
-    const id = url.match(/[-\w]{20,}/)[0];
+    const match = url.match(/[-\w]{20,}/);
+    let id: string;
+    if (match) {
+        id = match[0];
+    } else {
+        await textChannel.send("Invalid url");
+        return;
+    }
  
     spotify.getPlaylistTracks(id).then((data) => {
 

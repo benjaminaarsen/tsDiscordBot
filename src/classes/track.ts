@@ -6,11 +6,11 @@ export interface TrackData {
 	id: string;
 	title: string;
 }
-const youtube = google.youtube({
-    auth: process.env.YOUTUBE_TOKEN,
-    version: "v3"
-});
-const noop = () => {};
+// const youtube = google.youtube({
+//     auth: process.env.YOUTUBE_TOKEN,
+//     version: "v3"
+// });
+// const noop = () => {};
 
 export class Track implements TrackData{
     public readonly id: string;
