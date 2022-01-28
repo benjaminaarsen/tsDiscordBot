@@ -1,7 +1,7 @@
 import { AudioResource, createAudioResource } from "@discordjs/voice";
 import { stream } from "play-dl";
 import { google } from 'googleapis';
-
+import youtubesearch from 'youtube-search-api';
 export interface TrackData {
 	id: string;
 	title: string;
@@ -29,20 +29,31 @@ export class Track implements TrackData{
     }
 
     public static async from(query: string): Promise<Track> {
-		const info = await youtube.search.list({
-            part: [
-                "snippet"
-            ],
-            maxResults: 1,
-            q: query,
-            order: "viewCount"
-        }).then((res) => {
-            return {
-                title: res.data.items[0].snippet.title,
-                id: res.data.items[0].id.videoId
-            }
-        })
 
+        // classic yt api, has limit :( hopefully api below will resolve that
+
+		// const info = await youtube.search.list({
+        //     part: [
+        //         "snippet"
+        //     ],
+        //     maxResults: 1,
+        //     q: query,
+        //     order: "viewCount"
+        // }).then((res) => {
+        //     return {
+        //         title: res.data.items[0].snippet.title,
+        //         id: res.data.items[0].id.videoId
+        //     }
+        // })
+
+        const info = await youtubesearch.GetListByKeyword(query, false, 2)
+            .then((r) => {
+                // console.log(r.items[0].id)
+                return {
+                    title: r.items[0].title,
+                    id: r.items[0].id
+                }
+            })
 		return new Track({
 			title: info.title,
 			id: info.id

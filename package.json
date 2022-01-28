@@ -21,6 +21,7 @@
     "play-dl": "^1.8.2",
     "spotify-web-api-node": "^5.0.2",
     "tweetnacl": "^1.0.3",
+    "youtube-search-api": "^1.0.11",
     "ytdl-core": "^4.10.0"
   },
   "devDependencies": {
