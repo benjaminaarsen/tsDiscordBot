@@ -47,6 +47,14 @@ client.on('ready', () => {
 
 const subscriptions = new Map<Snowflake, Subscription>();
 
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
 async function playCommand(member, textChannel, args: string[], subscription: Subscription) {
     console.log("Play command triggered");
     if (!subscription) {
@@ -218,6 +226,11 @@ async function playListCommand(url: string, member, textChannel, subscription: S
         await textChannel.send(`Successfully added playlist`)
     })
 }
+async function shuffleCommand(textChannel, subscription: Subscription) {
+    const newQueue = shuffleArray(subscription.queue);
+    subscription.queue = newQueue;
+    await textChannel.send("Shuffled the queue!");
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
@@ -249,6 +262,9 @@ client.on("messageCreate", async (message) => {
                 break;
             case "repeat": 
                 loopCommand(message.channel, subscription);
+                break;
+            case "shuffle":
+                shuffleCommand(message.channel, subscription);
                 break;
             case "help": 
                 const commands = [
