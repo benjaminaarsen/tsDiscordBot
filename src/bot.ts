@@ -50,10 +50,15 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     if (oldState.channel && !newState.channel) {
         if (oldState.channel.members.size === 1) {
             const subscription = subscriptions.get(oldState.guild.id)
-            if (subscription) {
-                subscription.voiceConnection.destroy();
-                subscriptions.delete(oldState.guild.id);
+            try {
+                if (subscription) {
+                    subscription.voiceConnection.destroy();
+                    subscriptions.delete(oldState.guild.id);
+                }
+            } catch (err) {
+                console.error(err)
             }
+            
            
         }
     }
