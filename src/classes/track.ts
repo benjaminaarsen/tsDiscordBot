@@ -23,7 +23,13 @@ export class Track implements TrackData{
 
     public createAudioResource(): Promise<AudioResource<Track>> {
         return new Promise(async (resolve, reject) => {
-            const audioStream = await stream(this.id);
+            let audioStream;
+            try {
+                audioStream = await stream(this.id);
+            } catch (err) {
+                console.error(err);
+                reject();
+            }
             resolve(createAudioResource(audioStream.stream, { metadata: this, inputType: audioStream.type}))
         });
     }
