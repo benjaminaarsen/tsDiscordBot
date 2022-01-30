@@ -82,11 +82,16 @@ export class Subscription {
 				}
 				if (this.loop && oldState.status === AudioPlayerStatus.Playing && this.queue.length === 0) {
 					const resource = oldState.resource as AudioResource<Track>;
-					const track = await Track.from(resource.metadata.title);
+					const track = await Track.from(resource.metadata.title, resource.metadata.author, resource.metadata.channel);
 					this.queue = [track];
 					// console.log(this.queue);
 				}
 				void this.processQueue();
+			}
+			if (newState.status === AudioPlayerStatus.Playing) {
+				const resource = newState.resource as AudioResource<Track>;
+				const channel = resource.metadata.channel;
+				await channel.send(`Now playing ${resource.metadata.title} requested by ${resource.metadata.author.user.username}`)
 			}
 		});
 

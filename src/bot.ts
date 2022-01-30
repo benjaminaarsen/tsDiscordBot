@@ -107,7 +107,7 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
         await textChannel.send("Failed to join the voice channel");
         return;
     }
-        const track = await Track.from(args.join(" "));
+        const track = await Track.from(args.join(" "), member, textChannel);
         if (track) {
             if (subscription.queue.length !== 0) {
                 await textChannel.send(`Queued ${track.title}`);
@@ -172,13 +172,13 @@ async function leaveCommand(textChannel: TextChannel, subscription: Subscription
         await textChannel.send("I am currently not in a voice channel.")
     }
 }
-async function loopCommand(textChannel, subscription: Subscription) {
+async function loopCommand(member, textChannel, subscription: Subscription) {
     try {
         if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
             subscription.loop = !subscription.loop;
             if (subscription.loop) {
                 const resource = subscription.audioPlayer.state.resource as AudioResource<Track>;
-                const track = await Track.from(resource.metadata.title);
+                const track = await Track.from(resource.metadata.title, member, textChannel);
                 subscription.enqueue(track);
             }
             await textChannel.send(`Repeat is now ${subscription.loop ? "On" : "Off"}`)
@@ -236,7 +236,7 @@ async function playListCommand(url: string, member, textChannel, subscription: S
             })
             const query = `${artistsList.join(", ")} ${item.track.name} `
             try {
-                const track = await Track.from(query);
+                const track = await Track.from(query, member, textChannel);
                 subscription.enqueue(track);
             } catch (error) {
                 await textChannel.send(`Failed to play ${item.track.name}`);
@@ -300,7 +300,7 @@ client.on("messageCreate", async (message) => {
                 playListCommand(args[0], message.member, message.channel, subscription);
                 break;
             case "repeat": 
-                loopCommand(message.channel, subscription);
+                loopCommand(message.member, message.channel, subscription);
                 break;
             case "shuffle":
                 shuffleCommand(message.channel, subscription);
@@ -368,4 +368,4 @@ client.on("messageCreate", async (message) => {
         }
     }
 })
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TEST_TOKEN);

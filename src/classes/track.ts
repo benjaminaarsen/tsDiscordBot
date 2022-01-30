@@ -1,10 +1,13 @@
 import { AudioResource, createAudioResource } from "@discordjs/voice";
+import { GuildMember, Message, TextChannel } from "discord.js";
 import { stream } from "play-dl";
 // import { google } from 'googleapis';
 import youtubesearch from 'youtube-search-api';
 export interface TrackData {
 	id: string;
 	title: string;
+    author: GuildMember;
+    channel: TextChannel;
 }
 // const youtube = google.youtube({
 //     auth: process.env.YOUTUBE_TOKEN,
@@ -15,10 +18,14 @@ export interface TrackData {
 export class Track implements TrackData{
     public readonly id: string;
 	public readonly title: string;
+    public readonly author: GuildMember;
+    public readonly channel: TextChannel;
 
-	private constructor({ id, title }: TrackData) {
+	private constructor({ id, title, author, channel }: TrackData) {
 		this.id = id;
 		this.title = title;
+        this.author = author;
+        this.channel = channel
 	}
 
     public createAudioResource(): Promise<AudioResource<Track>> {
@@ -36,7 +43,7 @@ export class Track implements TrackData{
         });
     }
 
-    public static async from(query: string): Promise<Track> {
+    public static async from(query: string, author: GuildMember, channel: TextChannel): Promise<Track> {
 
         // classic yt api, has limit :( hopefully api below will resolve that
 
@@ -72,7 +79,9 @@ export class Track implements TrackData{
         }
 		return new Track({
 			title: info.title,
-			id: info.id
+			id: info.id,
+            author: author,
+            channel: channel
 		});
 	}
 }
