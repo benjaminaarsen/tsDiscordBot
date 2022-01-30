@@ -405,4 +405,4 @@ client.on("messageCreate", async (message) => {
         }
     }
 })
-client.login(process.env.DISCORD_TEST_TOKEN);
+client.login(process.env.DISCORD_TOKEN);
