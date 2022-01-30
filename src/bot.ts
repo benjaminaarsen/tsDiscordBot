@@ -115,7 +115,10 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
             subscription.enqueue(track);
         } else {
             await textChannel.send(`No music found with query: ${args.join(" ")}`)
-            subscription.voiceConnection.destroy();
+            if (subscription.queue.length === 0) {
+                subscription.voiceConnection.destroy();
+                subscriptions.delete(textChannel.guildId);
+            }
         }
         
       
