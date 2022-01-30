@@ -1,11 +1,11 @@
 require('dotenv').config();
 
 import { AudioPlayerStatus, AudioResource, entersState, joinVoiceChannel, VoiceConnectionStatus } from '@discordjs/voice';
-import { Client, GuildMember, Intents, Snowflake, TextChannel } from 'discord.js';
+import { Client, GuildMember, Intents, Snowflake, TextChannel, MessageEmbed } from 'discord.js';
 import { Subscription } from './classes/subscription';
 import { Track } from './classes/track';
 import SpotifyWebApi from "spotify-web-api-node";
-
+import { getLyrics } from 'genius-lyrics-api';
 const myIntents = new Intents();
 myIntents.add(
     Intents.FLAGS.GUILDS,
@@ -271,6 +271,32 @@ async function nowPlayingCommand(textChannel, subscription: Subscription) {
         await textChannel.send("Currently not playing anything.");
     }
 }
+async function lyricsCommand(textChannel, subscription: Subscription) {
+    if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+        const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;
+        const options = {
+            apiKey: process.env.GENIUS_SECRET,
+            title: m.title,
+            artist: m.artist,
+            optimizeQuery: true
+        }
+        getLyrics(options).then(async (lyrics) => {
+            if (lyrics) {
+                // await textChannel.send(lyrics)
+                // console.log(lyrics);
+                const embed = new MessageEmbed()
+                    .setTitle(`Lyrics for ${m.title}`)
+                    .setDescription(lyrics)
+                    .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"})
+                await textChannel.send({embeds: [embed]});
+            } else {
+                await textChannel.send(`Couldn't find lyrics for ${m.title}`)
+            }
+        })
+    } else {
+        await textChannel.send("Currently not playing anything.");
+    }
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
@@ -312,11 +338,18 @@ client.on("messageCreate", async (message) => {
             case "nowplaying":
                 nowPlayingCommand(message.channel, subscription);
                 break;
+            case "lyrics":
+                lyricsCommand(message.channel, subscription);
+                break;
             case "help": 
                 const commands = [
                     {
                         name: "play",
                         description: "Plays music from given url / keywords"
+                    },
+                    {
+                        name: "lyrics",
+                        description: "Send lyrics of current playing song"
                     },
                     {
                         name: "nowplaying",
@@ -372,4 +405,4 @@ client.on("messageCreate", async (message) => {
         }
     }
 })
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TEST_TOKEN);

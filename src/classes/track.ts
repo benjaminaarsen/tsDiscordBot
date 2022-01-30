@@ -9,6 +9,7 @@ export interface TrackData {
 	title: string;
     author: GuildMember;
     channel: TextChannel;
+    artist: string;
 }
 // const youtube = google.youtube({
 //     auth: process.env.YOUTUBE_TOKEN,
@@ -21,12 +22,14 @@ export class Track implements TrackData{
 	public readonly title: string;
     public readonly author: GuildMember;
     public readonly channel: TextChannel;
+    public readonly artist: string;
 
-	private constructor({ url, title, author, channel }: TrackData) {
+	private constructor({ url, title, author, channel, artist }: TrackData) {
 		this.url = url;
 		this.title = title;
         this.author = author;
         this.channel = channel;
+        this.artist = artist;
 	}
 
     public createAudioResource(): Promise<AudioResource<Track>> {
@@ -53,11 +56,23 @@ export class Track implements TrackData{
             const i = await search(query, {source: {soundcloud: "tracks"}, limit: 1, fuzzy: true}).then(
                 (l) => {return l[0]}
             )
+            let artist;
+            if (i.publisher) {
+                if (i.publisher.artist) {
+                    artist = i.publisher.artist
+                }
+                else {
+                    artist = i.user.name
+                }
+            } else {
+                artist = i.user.name
+            }
             track = new Track({
                 title: i.name,
                 url: i.url,
                 author: author,
-                channel: channel
+                channel: channel,
+                artist: artist
             })
         })
         if (track) {
@@ -68,6 +83,7 @@ export class Track implements TrackData{
                 url: info.url,
                 author: author,
                 channel: channel,
+                artist: info.channel.name
             });
         }
 	}
