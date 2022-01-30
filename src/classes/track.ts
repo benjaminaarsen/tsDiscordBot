@@ -1,10 +1,11 @@
 import { AudioResource, createAudioResource } from "@discordjs/voice";
 import { GuildMember, Message, TextChannel } from "discord.js";
-import { stream } from "play-dl";
+import { dlp } from "googleapis/build/src/apis/dlp";
+import { stream, search, video_info } from "play-dl";
+import SearchOptions from "play-dl";
 // import { google } from 'googleapis';
-import youtubesearch from 'youtube-search-api';
 export interface TrackData {
-	id: string;
+	url: string;
 	title: string;
     author: GuildMember;
     channel: TextChannel;
@@ -16,21 +17,21 @@ export interface TrackData {
 // const noop = () => {};
 
 export class Track implements TrackData{
-    public readonly id: string;
+    public readonly url: string;
 	public readonly title: string;
     public readonly author: GuildMember;
     public readonly channel: TextChannel;
 
-	private constructor({ id, title, author, channel }: TrackData) {
-		this.id = id;
+	private constructor({ url, title, author, channel }: TrackData) {
+		this.url = url;
 		this.title = title;
         this.author = author;
-        this.channel = channel
+        this.channel = channel;
 	}
 
     public createAudioResource(): Promise<AudioResource<Track>> {
         return new Promise(async (resolve, reject) => {
-            const audioStream = await stream(this.id).catch(
+            const audioStream = await stream(this.url).catch(
                 () => {
                     return;
                 }
@@ -44,44 +45,30 @@ export class Track implements TrackData{
     }
 
     public static async from(query: string, author: GuildMember, channel: TextChannel): Promise<Track> {
-
-        // classic yt api, has limit :( hopefully api below will resolve that
-
-		// const info = await youtube.search.list({
-        //     part: [
-        //         "snippet"
-        //     ],
-        //     maxResults: 1,
-        //     q: query,
-        //     order: "viewCount"
-        // }).then((res) => {
-        //     return {
-        //         title: res.data.items[0].snippet.title,
-        //         id: res.data.items[0].id.videoId
-        //     }
-        // })
-
-        const info = await youtubesearch.GetListByKeyword(query, false, 2)
-            .then((r) => {
-                if (r.items[0]) {
-                    return {
-                        title: r.items[0].title,
-                        id: r.items[0].id
-                    }
-                }
-                else {
-                    return;
-                }
-                
+        let info = await search(query, {source: {youtube: "video"}, limit: 1}).then(
+            (l) => {return l[0]}
+        )
+        let track : Track;
+        await video_info(info.url).catch(async () => {
+            const i = await search(query, {source: {soundcloud: "tracks"}, limit: 1, fuzzy: true}).then(
+                (l) => {console.log(l[0]); return l[0]}
+            )
+            track = new Track({
+                title: i.name,
+                url: i.url,
+                author: author,
+                channel: channel
             })
-        if (!info) {
-            return;
+        })
+        if (track) {
+            return track;
+        } else {
+            return new Track({
+                title: info.title,
+                url: info.url,
+                author: author,
+                channel: channel,
+            });
         }
-		return new Track({
-			title: info.title,
-			id: info.id,
-            author: author,
-            channel: channel
-		});
 	}
 }
