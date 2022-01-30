@@ -1,6 +1,6 @@
 import { AudioResource, createAudioResource } from "@discordjs/voice";
 import { stream } from "play-dl";
-import { google } from 'googleapis';
+// import { google } from 'googleapis';
 import youtubesearch from 'youtube-search-api';
 export interface TrackData {
 	id: string;
@@ -23,12 +23,14 @@ export class Track implements TrackData{
 
     public createAudioResource(): Promise<AudioResource<Track>> {
         return new Promise(async (resolve, reject) => {
-            let audioStream;
-            try {
-                audioStream = await stream(this.id);
-            } catch (err) {
-                console.error(err);
-                reject();
+            const audioStream = await stream(this.id).catch(
+                () => {
+                    return;
+                }
+            );
+            if (!audioStream) {
+                reject(new Error("Returned error, maybe NFSW?"));
+                return;
             }
             resolve(createAudioResource(audioStream.stream, { metadata: this, inputType: audioStream.type}))
         });
@@ -54,7 +56,6 @@ export class Track implements TrackData{
 
         const info = await youtubesearch.GetListByKeyword(query, false, 2)
             .then((r) => {
-                // console.log(r.items[0].id)
                 return {
                     title: r.items[0].title,
                     id: r.items[0].id

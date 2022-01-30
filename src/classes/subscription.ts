@@ -87,7 +87,7 @@ export class Subscription {
 					// console.log(this.queue);
 				}
 				void this.processQueue();
-			} 
+			}
 		});
 
 		// this.audioPlayer.on('error', (error: { resource: any; }) => (error.resource as AudioResource<Track>).metadata.onError(error));
@@ -133,16 +133,24 @@ export class Subscription {
 		if (this.loop) {
 			this.queue.push(nextTrack);
 		}
-        try {
-            const resource = await nextTrack.createAudioResource();
-            this.audioPlayer.play(resource);
-            this.queueLock = false;
-        }
-        catch (error) {
-            // nextTrack.onError(error as Error);
-            console.warn(error);
-            this.queueLock = false;
-            return this.processQueue();
-        }
+        
+		const resource = await nextTrack.createAudioResource().catch(
+			(err) => {
+				console.error(err.message)
+			}
+		);
+		if (resource) {
+			this.audioPlayer.play(resource);
+			this.queueLock = false;
+		} else if (this.queue.length > 0){
+			// go to next track
+			this.queueLock = false;
+			return this.processQueue();
+		} else {
+			this.voiceConnection.destroy();
+		}
+		
+			
+			
     }
 }

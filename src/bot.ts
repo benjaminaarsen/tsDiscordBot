@@ -48,7 +48,8 @@ client.on('ready', () => {
 client.on("voiceStateUpdate", (oldState, newState) => {
     //if leave
     if (oldState.channel && !newState.channel) {
-        if (oldState.channel.members.size === 1) {
+        //if one user in voice channel and its the bot
+        if (oldState.channel.members.size === 1 && oldState.channel.members.first().user === client.user) {
             const subscription = subscriptions.get(oldState.guild.id)
             try {
                 if (subscription) {
@@ -106,16 +107,14 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
         await textChannel.send("Failed to join the voice channel");
         return;
     }
-
-    try {
         const track = await Track.from(args.join(" "));
+        if (subscription.queue.length !== 0) {
+            await textChannel.send(`Queued ${track.title}`);
+        }
         subscription.enqueue(track);
-        textChannel.send(`Queued ${track.title}`);
-    } catch (error){
-        console.warn(error);
-        await textChannel.send("Failed to play track");
-    }
-}
+      
+    
+}   
 async function skipCommand(textChannel, subscription: Subscription) {
     if (subscription) {
         subscription.audioPlayer.stop();
@@ -239,9 +238,6 @@ async function playListCommand(url: string, member, textChannel, subscription: S
                 console.error(error);
             }
         })
-    }, (err) => {
-        console.error(err);
-
     }).catch((err) => {
         console.error(err);
         textChannel.send("An error occured, maybe the link is incorrect?");
@@ -367,4 +363,4 @@ client.on("messageCreate", async (message) => {
         }
     }
 })
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TEST_TOKEN);
