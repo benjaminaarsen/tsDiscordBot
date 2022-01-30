@@ -56,11 +56,20 @@ export class Track implements TrackData{
 
         const info = await youtubesearch.GetListByKeyword(query, false, 2)
             .then((r) => {
-                return {
-                    title: r.items[0].title,
-                    id: r.items[0].id
+                if (r.items[0]) {
+                    return {
+                        title: r.items[0].title,
+                        id: r.items[0].id
+                    }
                 }
+                else {
+                    return;
+                }
+                
             })
+        if (!info) {
+            return;
+        }
 		return new Track({
 			title: info.title,
 			id: info.id

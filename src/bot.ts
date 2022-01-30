@@ -108,10 +108,15 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
         return;
     }
         const track = await Track.from(args.join(" "));
-        if (subscription.queue.length !== 0) {
-            await textChannel.send(`Queued ${track.title}`);
+        if (track) {
+            if (subscription.queue.length !== 0) {
+                await textChannel.send(`Queued ${track.title}`);
+            }
+            subscription.enqueue(track);
+        } else {
+            await textChannel.send(`No music found with query: ${args.join(" ")}`)
         }
-        subscription.enqueue(track);
+        
       
     
 }   
