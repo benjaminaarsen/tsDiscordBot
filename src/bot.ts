@@ -312,6 +312,7 @@ async function lyricsCommand(textChannel, subscription: Subscription) {
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         let subscription = subscriptions.get(message.guildId);
+        if (!message.content.startsWith(prefix)) return;
         const [command, ...args] = message.content
                 .trim()
                 .substring(prefix.length)
@@ -416,6 +417,7 @@ client.on("messageCreate", async (message) => {
                 break;
             default:
                 message.channel.send(`Command "${command}" not found. Use ".help" to see what commands are available.`);
+                break;
 
         }   
     }
