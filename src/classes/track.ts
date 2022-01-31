@@ -51,6 +51,10 @@ export class Track implements TrackData{
         let info = await search(query, {source: {youtube: "video"}, limit: 1}).then(
             (l) => {return l[0]}
         )
+        if (!info) {    
+            console.log(info);
+            return;
+        }
         let track : Track;
         await video_info(info.url).catch(async () => {
             const i = await search(query, {source: {soundcloud: "tracks"}, limit: 1, fuzzy: true}).then(
