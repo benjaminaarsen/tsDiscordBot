@@ -414,7 +414,10 @@ client.on("messageCreate", async (message) => {
                 })
                 await message.channel.send(msg);
                 break;
-        }
+            default:
+                message.channel.send(`Command "${command}" not found`);
+
+        }   
     }
 })
 client.login(process.env.DISCORD_TOKEN);
