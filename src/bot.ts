@@ -255,47 +255,59 @@ async function playListCommand(url: string, member, textChannel, subscription: S
     })
 }
 async function clearCommand(textChannel, subscription: Subscription) {
-    subscription.queue = [];
-    await textChannel.send("The queue has been cleared");
+    if (subscription) {
+        subscription.queue = [];
+        await textChannel.send("The queue has been cleared");
+    }
+    
 }
 async function shuffleCommand(textChannel, subscription: Subscription) {
-    const newQueue = shuffleArray(subscription.queue);
-    subscription.queue = newQueue;
-    await textChannel.send("Shuffled the queue!");
+    if (subscription) {
+        const newQueue = shuffleArray(subscription.queue);
+        subscription.queue = newQueue;
+        await textChannel.send("Shuffled the queue!");
+    }
+    
 }
 async function nowPlayingCommand(textChannel, subscription: Subscription) {
     //if there is something playing
-    if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-        await textChannel.send(`Currenty playing ${(subscription.audioPlayer.state.resource as AudioResource<Track>).metadata.title}`)
-    } else {
-        await textChannel.send("Currently not playing anything.");
+    if (subscription) {
+        if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+            await textChannel.send(`Currenty playing ${(subscription.audioPlayer.state.resource as AudioResource<Track>).metadata.title}`)
+        } else {
+            await textChannel.send("Currently not playing anything.");
+        }
     }
+    
 }
 async function lyricsCommand(textChannel, subscription: Subscription) {
-    if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-        const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;
-        const options = {
-            apiKey: process.env.GENIUS_SECRET,
-            title: m.title,
-            artist: m.artist,
-            optimizeQuery: true
-        }
-        getLyrics(options).then(async (lyrics) => {
-            if (lyrics) {
-                // await textChannel.send(lyrics)
-                // console.log(lyrics);
-                const embed = new MessageEmbed()
-                    .setTitle(`Lyrics for ${m.title}`)
-                    .setDescription(lyrics)
-                    .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"})
-                await textChannel.send({embeds: [embed]});
-            } else {
-                await textChannel.send(`Couldn't find lyrics for ${m.title}`)
+    if (subscription) {
+        if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+            const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;
+            const options = {
+                apiKey: process.env.GENIUS_SECRET,
+                title: m.title,
+                artist: m.artist,
+                optimizeQuery: true
             }
-        })
-    } else {
-        await textChannel.send("Currently not playing anything.");
+            getLyrics(options).then(async (lyrics) => {
+                if (lyrics) {
+                    // await textChannel.send(lyrics)
+                    // console.log(lyrics);
+                    const embed = new MessageEmbed()
+                        .setTitle(`Lyrics for ${m.title}`)
+                        .setDescription(lyrics)
+                        .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"})
+                    await textChannel.send({embeds: [embed]});
+                } else {
+                    await textChannel.send(`Couldn't find lyrics for ${m.title}`)
+                }
+            })
+        } else {
+            await textChannel.send("Currently not playing anything.");
+        }
     }
+    
 }
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
