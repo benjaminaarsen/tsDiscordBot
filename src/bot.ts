@@ -415,7 +415,7 @@ client.on("messageCreate", async (message) => {
                 await message.channel.send(msg);
                 break;
             default:
-                message.channel.send(`Command "${command}" not found`);
+                message.channel.send(`Command "${command}" not found. Use ".help" to see what commands are available.`);
 
         }   
     }
