@@ -78,7 +78,12 @@ export class Subscription {
 				// The queue is then processed to start playing the next track, if one is available.
 				// (oldState.resource as AudioResource<Track>).metadata.onFinish();
 				if (this.voiceConnection.state.status !== VoiceConnectionStatus.Destroyed) {
-					this.timeout = setTimeout(()=>{this.voiceConnection.destroy(); this.stop()}, 20000);
+					this.timeout = setTimeout(()=>{
+						if (this.voiceConnection.state.status !== VoiceConnectionStatus.Destroyed) {
+							this.stop();
+							this.voiceConnection.destroy(); 
+						}
+					}, 20000);
 				}
 				if (this.loop && oldState.status === AudioPlayerStatus.Playing && this.queue.length === 0) {
 					const resource = oldState.resource as AudioResource<Track>;
