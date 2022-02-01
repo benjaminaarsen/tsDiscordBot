@@ -1,5 +1,5 @@
 require('dotenv').config();
-
+//TODO last.fm api?
 import { AudioPlayerStatus, AudioResource, entersState, joinVoiceChannel, VoiceConnectionStatus } from '@discordjs/voice';
 import { Client, GuildMember, Intents, Snowflake, TextChannel, MessageEmbed } from 'discord.js';
 import { Subscription } from './classes/subscription';
