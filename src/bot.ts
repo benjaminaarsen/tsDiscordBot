@@ -284,6 +284,7 @@ async function lyricsCommand(textChannel, subscription: Subscription) {
     if (subscription) {
         if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
             const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;
+            console.log(`Looking up lyrics for: ${m.title} from ${m.artist}`);
             const options = {
                 apiKey: process.env.GENIUS_SECRET,
                 title: m.title,

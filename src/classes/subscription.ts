@@ -94,9 +94,11 @@ export class Subscription {
 				void this.processQueue();
 			}
 			if (newState.status === AudioPlayerStatus.Playing) {
-				const resource = newState.resource as AudioResource<Track>;
-				const channel = resource.metadata.channel;
-				await channel.send(`Now playing ${resource.metadata.title} requested by ${resource.metadata.author.user.username}`)
+				if (!this.loop) {
+					const resource = newState.resource as AudioResource<Track>;
+					const channel = resource.metadata.channel;
+					await channel.send(`Now playing ${resource.metadata.title} requested by ${resource.metadata.author.user.username}`)
+				}
 			}
 		});
 
