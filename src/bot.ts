@@ -352,9 +352,9 @@ client.on("messageCreate", async (message) => {
             case "nowplaying":
                 nowPlayingCommand(message.channel, subscription);
                 break;
-            case "lyrics":
-                lyricsCommand(message.channel, subscription);
-                break;
+            // case "lyrics":
+            //     lyricsCommand(message.channel, subscription);
+            //     break;
             case "help": 
                 const commands = [
                     {
