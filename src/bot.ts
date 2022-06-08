@@ -5,7 +5,7 @@ import { Client, GuildMember, Intents, Snowflake, TextChannel, MessageEmbed } fr
 import { Subscription } from './classes/subscription';
 import { Track } from './classes/track';
 import SpotifyWebApi from "spotify-web-api-node";
-import { getLyrics } from 'genius-lyrics-api'
+import { getSong } from 'genius-lyrics-api'
 
 // import songlyrics from 'songlyrics' not working as i would like yet
 
@@ -30,7 +30,8 @@ spotify.clientCredentialsGrant().then(
     }
 )
 
-const prefix = ".";
+const prefix = process.env.PREFIX;
+
 client.on('ready', () => {
     console.log(`${client.user.username} has logged in`);
     const subscriptionLoop = setInterval(async () => {
@@ -291,15 +292,15 @@ async function lyricsCommand(textChannel, subscription: Subscription) {
             const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;   
             const options = {
                 apiKey: process.env.GENIUS_SECRET,
-                title: m.query,
+                title: m.title,
                 artist: m.artist,
                 optimizeQuery: true
             }
-            getLyrics(options).then(async (lyrics) => {
-                if (lyrics) {
+            getSong(options).then(async (song) => {
+                if (song) {
                     const embed = new MessageEmbed()
-                        .setTitle(`Lyrics for ${m.query}`)
-                        .setDescription(lyrics)
+                        .setTitle(`Lyrics for ${m.title} - ${m.artist}`)
+                        .setDescription(`${song.lyrics}\n${song.url}`)
                         .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
                     await textChannel.send({embeds: [embed]});
                 } else await textChannel.send(`Couldn't find lyrics for ${m.query}`)

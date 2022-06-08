@@ -1,6 +1,7 @@
+
 import { AudioResource, createAudioResource } from "@discordjs/voice";
 import { GuildMember, Message, TextChannel } from "discord.js";
-import { stream, search, video_info, YouTubeStream } from "play-dl";
+import { stream, search, video_info, YouTubeStream, YouTubeVideo } from "play-dl";
 export interface TrackData {
 	url: string;
 	title: string;
@@ -49,7 +50,8 @@ export class Track implements TrackData{
     }
 
     public static async from(query: string, author: GuildMember, channel: TextChannel): Promise<Track> {
-        let info;
+        let info: YouTubeVideo;
+        
         try{
             info = await search(query, {source: {youtube: "video"}, limit: 1}).then(
                 (l) => {return l[0]}
@@ -64,14 +66,71 @@ export class Track implements TrackData{
             console.log(info);
             return;
         }
-        // console.log(await video_info(info.url));
         
+    
+        const song = await video_info(info.url).then( (data) => {
+            if (data.video_details.music){
+                return {
+                    artist: data.video_details.music[0].artist['text'],
+                    title: data.video_details.music[0].song['text'] ? data.video_details.music[0].song['text'] : data.video_details.music[0].song
+                }
+            } else {
+                return false
+            }
+        })
+        function commonWords1 (first: string, second: string) {
+            var first = first.replace(/[^\w\s]/gi, '')
+            var second = second.replace(/[^\w\s]/gi, '')
+            // var third = third.replace(/[^\w\s]/gi, '')
+            var a = first.split(' ')
+            var b = second.split(' ')
+            // var c = third.split(' ')
+            var d = []
+
+            for (var i = 0; i < a.length; i++) {
+              for (var j = 0; j < b.length; j++) {
+                // for (var k = 0; k < c.length; k++) {
+                    // console.log(`${a[i]} ${b[j]}`)
+                    if (a[i].toLowerCase() === b[j].toLowerCase() && d.indexOf(a[i]) !== null) {
+                        d.push(a[i])
+                      }
+                // }
+              }
+            }
+            return d.join(' ')
+        }
+        function commonWords2 (first: string, second: string, third: string) {
+            var first = first.replace(/[^\w\s]/gi, '')
+            var second = second.replace(/[^\w\s]/gi, '')
+            var third = third.replace(/[^\w\s]/gi, '')
+            var a = first.split(' ')
+            var b = second.split(' ')
+            var c = third.split(' ')
+            var d = []
+
+            for (var i = 0; i < a.length; i++) {
+                for (var j = 0; j < b.length; j++) {
+                for (var k = 0; k < c.length; k++) {
+                    // console.log(`${a[i]} ${b[j]}`)
+                    if (a[i].toLowerCase() === b[j].toLowerCase() && b[j].toLowerCase() === c[k].toLowerCase() && d.indexOf(a[i]) !== null) {
+                        d.push(a[i])
+                        }
+                }
+                }
+            }
+            return d.join(' ')
+        }
+
+        let title;
+        if (song) title = commonWords2(info.title, query, song.title)
+        else title = commonWords1(info.title, query)
+
         return new Track({
-            title: info.title,
+            title: title,
             url: info.url,
             author: author,
             channel: channel,
-            artist: info.channel.name,
+            artist: song ? song.artist : info.channel.name,
             query: query
         });
 	}
