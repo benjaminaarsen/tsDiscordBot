@@ -1,11 +1,15 @@
 require('dotenv').config();
 //TODO last.fm api?
-import { AudioPlayerStatus, AudioResource, entersState, joinVoiceChannel, VoiceConnectionStatus } from '@discordjs/voice';
+import { AudioPlayerStatus, AudioResource, DiscordGatewayAdapterCreator, entersState, joinVoiceChannel, VoiceConnectionStatus } from '@discordjs/voice';
 import { Client, GuildMember, Intents, Snowflake, TextChannel, MessageEmbed } from 'discord.js';
 import { Subscription } from './classes/subscription';
 import { Track } from './classes/track';
 import SpotifyWebApi from "spotify-web-api-node";
-import { getLyrics } from 'genius-lyrics-api';
+import { getLyrics } from 'genius-lyrics-api'
+
+// import songlyrics from 'songlyrics' not working as i would like yet
+
+
 const myIntents = new Intents();
 myIntents.add(
     Intents.FLAGS.GUILDS,
@@ -63,12 +67,8 @@ client.on("voiceStateUpdate", (oldState, newState) => {
            
         }
     }
-    
-
-    // if (newState.channel.members.keys.length === 0) {
-    //     newState.disconnect();
-    // }
 })
+
 const subscriptions = new Map<Snowflake, Subscription>();
 
 function shuffleArray(array) {
@@ -88,7 +88,7 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
                 joinVoiceChannel({
                     channelId: channel.id,
                     guildId: channel.guildId,
-                    adapterCreator: channel.guild.voiceAdapterCreator
+                    adapterCreator: channel.guild.voiceAdapterCreator as unknown as DiscordGatewayAdapterCreator
                 })
             );
             subscription.voiceConnection.on("error", console.warn);
@@ -113,6 +113,7 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
                 await textChannel.send(`Queued ${track.title}`);
             }
             subscription.enqueue(track);
+            await textChannel.send(`Now playing ${track.title} requested by ${track.author.displayName}`)
         } else {
             await textChannel.send(`No music found with query: ${args.join(" ")}`)
             if (subscription.queue.length === 0) {
@@ -126,8 +127,12 @@ async function playCommand(member, textChannel, args: string[], subscription: Su
 }   
 async function skipCommand(textChannel, subscription: Subscription) {
     if (subscription) {
+        let nextTrack;
+        if (subscription.queue.length !== 1) {
+            nextTrack = subscription.queue[1];
+        }
         subscription.audioPlayer.stop();
-        await textChannel.send("Skipped song");
+        if (nextTrack) await textChannel.send(`Skipped song, now playing ${nextTrack.title} requested by ${nextTrack.author.displayName}`);
     } else {
         await textChannel.send("I am currently not playing anything.");
     }
@@ -203,7 +208,7 @@ async function playListCommand(url: string, member, textChannel, subscription: S
                 joinVoiceChannel({
                     channelId: channel.id,
                     guildId: channel.guildId,
-                    adapterCreator: channel.guild.voiceAdapterCreator
+                    adapterCreator: channel.guild.voiceAdapterCreator as unknown as DiscordGatewayAdapterCreator
                 })
             );
             subscription.voiceConnection.on("error", console.warn);
@@ -283,32 +288,26 @@ async function nowPlayingCommand(textChannel, subscription: Subscription) {
 async function lyricsCommand(textChannel, subscription: Subscription) {
     if (subscription) {
         if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-            const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;
-            console.log(`Looking up lyrics for: ${m.title} from ${m.artist}`);
+            const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;   
             const options = {
                 apiKey: process.env.GENIUS_SECRET,
-                title: m.title,
+                title: m.query,
                 artist: m.artist,
                 optimizeQuery: true
             }
             getLyrics(options).then(async (lyrics) => {
                 if (lyrics) {
-                    // await textChannel.send(lyrics)
-                    // console.log(lyrics);
                     const embed = new MessageEmbed()
-                        .setTitle(`Lyrics for ${m.title}`)
+                        .setTitle(`Lyrics for ${m.query}`)
                         .setDescription(lyrics)
-                        .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"})
+                        .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
                     await textChannel.send({embeds: [embed]});
-                } else {
-                    await textChannel.send(`Couldn't find lyrics for ${m.title}`)
-                }
+                } else await textChannel.send(`Couldn't find lyrics for ${m.query}`)
             })
         } else {
-            await textChannel.send("Currently not playing anything.");
-        }
+                await textChannel.send("Currently not playing anything.");
+            }
     }
-    
 }
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
@@ -352,9 +351,9 @@ client.on("messageCreate", async (message) => {
             case "nowplaying":
                 nowPlayingCommand(message.channel, subscription);
                 break;
-            // case "lyrics":
-            //     lyricsCommand(message.channel, subscription);
-            //     break;
+            case "lyrics":
+                lyricsCommand(message.channel, subscription);
+                break;
             case "help": 
                 const commands = [
                     {

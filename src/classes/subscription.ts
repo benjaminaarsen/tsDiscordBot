@@ -93,13 +93,13 @@ export class Subscription {
 				}
 				void this.processQueue();
 			}
-			if (newState.status === AudioPlayerStatus.Playing) {
-				if (!this.loop) {
-					const resource = newState.resource as AudioResource<Track>;
-					const channel = resource.metadata.channel;
-					await channel.send(`Now playing ${resource.metadata.title} requested by ${resource.metadata.author.user.username}`)
-				}
-			}
+			// if (newState.status === AudioPlayerStatus.Playing) {
+			// 	if (!this.loop) {
+			// 		const resource = newState.resource as AudioResource<Track>;
+			// 		const channel = resource.metadata.channel;
+			// 		await channel.send(`Now playing ${resource.metadata.title} requested by ${resource.metadata.author.user.username}`)
+			// 	}
+			// }
 		});
 
 		// this.audioPlayer.on('error', (error: { resource: any; }) => (error.resource as AudioResource<Track>).metadata.onError(error));

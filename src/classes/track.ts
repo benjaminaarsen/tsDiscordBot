@@ -1,21 +1,14 @@
 import { AudioResource, createAudioResource } from "@discordjs/voice";
 import { GuildMember, Message, TextChannel } from "discord.js";
-import { dlp } from "googleapis/build/src/apis/dlp";
-import { stream, search, video_info } from "play-dl";
-import SearchOptions from "play-dl";
-// import { google } from 'googleapis';
+import { stream, search, video_info, YouTubeStream } from "play-dl";
 export interface TrackData {
 	url: string;
 	title: string;
     author: GuildMember;
     channel: TextChannel;
     artist: string;
+    query: string;
 }
-// const youtube = google.youtube({
-//     auth: process.env.YOUTUBE_TOKEN,
-//     version: "v3"
-// });
-// const noop = () => {};
 
 export class Track implements TrackData{
     public readonly url: string;
@@ -23,72 +16,63 @@ export class Track implements TrackData{
     public readonly author: GuildMember;
     public readonly channel: TextChannel;
     public readonly artist: string;
+    public readonly query: string;
 
-	private constructor({ url, title, author, channel, artist }: TrackData) {
+	private constructor({ url, title, author, channel, artist, query }: TrackData) {
 		this.url = url;
 		this.title = title;
         this.author = author;
         this.channel = channel;
         this.artist = artist;
+        this.query = query;
 	}
 
     public createAudioResource(): Promise<AudioResource<Track>> {
         return new Promise(async (resolve, reject) => {
-            const audioStream = await stream(this.url).catch(
-                () => {
-                    return;
+            await stream(this.url)
+            .catch(
+                (err) => {
+                    reject(new Error(err));
                 }
-            );
-            if (!audioStream) {
-                reject(new Error("Returned error, maybe NFSW?"));
-                return;
-            }
-            resolve(createAudioResource(audioStream.stream, { metadata: this, inputType: audioStream.type}))
+            )
+            .then((data: YouTubeStream) => {
+                resolve(createAudioResource(data.stream, { metadata: this, inputType: data.type}))
+                }
+            )
+            .catch(
+                (err) => {
+                    reject(new Error(err));
+                }
+            )
         });
+        
     }
 
     public static async from(query: string, author: GuildMember, channel: TextChannel): Promise<Track> {
-        let info = await search(query, {source: {youtube: "video"}, limit: 1}).then(
-            (l) => {return l[0]}
-        )
+        let info;
+        try{
+            info = await search(query, {source: {youtube: "video"}, limit: 1}).then(
+                (l) => {return l[0]}
+            )
+        }
+        catch (error) {
+            console.log(error);
+            await channel.send("Something went wrong playing the track, try again later.")
+        }
+        
         if (!info) {    
             console.log(info);
             return;
         }
-        let track : Track;
-        await video_info(info.url).catch(async () => {
-            const i = await search(query, {source: {soundcloud: "tracks"}, limit: 1, fuzzy: true}).then(
-                (l) => {return l[0]}
-            )
-            let artist;
-            if (i.publisher) {
-                if (i.publisher.artist) {
-                    artist = i.publisher.artist
-                }
-                else {
-                    artist = i.user.name
-                }
-            } else {
-                artist = i.user.name
-            }
-            track = new Track({
-                title: i.name,
-                url: i.url,
-                author: author,
-                channel: channel,
-                artist: artist
-            })
-        })
-        if (track) {
-            return track;
-        } else {
-            return new Track({
-                title: info.title,
-                url: info.url,
-                author: author,
-                channel: channel,
-                artist: info.channel.name
-            });
-        }
+        // console.log(await video_info(info.url));
+        
+        return new Track({
+            title: info.title,
+            url: info.url,
+            author: author,
+            channel: channel,
+            artist: info.channel.name,
+            query: query
+        });
 	}
 }
