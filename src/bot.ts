@@ -249,7 +249,7 @@ async function playListCommand(url: string, member, textChannel, subscription: S
                 const track = await Track.from(query, member, textChannel);
                 subscription.enqueue(track);
             } catch (error) {
-                await textChannel.send(`Failed to play ${item.track.name}`);
+                await textChannel.send(`Failed to play ${item.track.name}, maybe it's explicit?`);
                 console.error(error);
             }
         })
