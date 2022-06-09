@@ -130,7 +130,7 @@ async function skipCommand(textChannel, subscription: Subscription) {
     if (subscription) {
         let nextTrack;
         if (subscription.queue.length !== 1) {
-            nextTrack = subscription.queue[1];
+            nextTrack = subscription.queue[0];
         }
         subscription.audioPlayer.stop();
         if (nextTrack) await textChannel.send(`Skipped song, now playing ${nextTrack.title} requested by ${nextTrack.author.displayName}`);
