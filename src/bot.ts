@@ -302,7 +302,16 @@ async function lyricsCommand(textChannel, subscription: Subscription) {
                         .setTitle(`Lyrics for ${m.title} - ${m.artist}`)
                         .setDescription(`${song.lyrics}\n${song.url}`)
                         .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
-                    await textChannel.send({embeds: [embed]});
+                    try {
+                        await textChannel.send({embeds: [embed]});
+                    }
+                    catch {
+                        const embed = new MessageEmbed()
+                        .setTitle(`Lyrics for ${m.title} - ${m.artist}`)
+                        .setDescription(`$Lyrics were too big, here is the url:\n${song.url}`)
+                        .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
+                        await textChannel.send({embeds: [embed]});
+                    }
                 } else await textChannel.send(`Couldn't find lyrics for ${m.query}`)
             })
         } else {
