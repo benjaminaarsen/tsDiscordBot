@@ -9,7 +9,7 @@ import { getSong } from 'genius-lyrics-api';
 import { DisTube } from 'distube';
 // import songlyrics from 'songlyrics' not working as i would like yet
 
-
+let leaveTimeout;
 const myIntents = new Intents();
 myIntents.add(
     Intents.FLAGS.GUILDS,
@@ -80,62 +80,83 @@ async function playCommand(member, textChannel, args: string[]) {
     await textChannel.send("Please join a voice channel!");
     return;
 }
-// async function skipCommand(textChannel, subscription: Subscription) {
-//     if (subscription) {
-//         let nextTrack;
-//         if (subscription.queue.length !== 1) {
-//             nextTrack = subscription.queue[1];
-//         }
-//         subscription.audioPlayer.stop();
-//         if (nextTrack) await textChannel.send(`Skipped song, now playing ${nextTrack.title} requested by ${nextTrack.author.displayName}`);
-//     } else {
-//         await textChannel.send("I am currently not playing anything.");
-//     }
-// }
-// async function queueCommand(textChannel, subscription: Subscription) {
-//     if (subscription) {
-//         let current;
-//         if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-//             current = `Playing ${(subscription.audioPlayer.state.resource as AudioResource<Track>).metadata.title}`
-//         } else {
-//             current = `Nothing currently playing`
-//         }
-//         const queue = 
-//             subscription.queue
-//                 .slice(0, 5)
-//                 .map((track, index) => `${index + 1}) ${track.title}`)
-//                 .join("\n")
-//         // console.log(queue);
-//         await textChannel.send(`${current}\n\n${queue}`);
-//     } else {
-//         await textChannel.send("I am currently not playing anything.")
-//     }
-// }
-// async function pauseCommand(textChannel, subscription: Subscription) {
-//     if (subscription) {
-//         subscription.audioPlayer.pause();
-//         await textChannel.send("Paused the player")
-//     } else {
-//         await textChannel.send("I am currently not playing anything.")
-//     }
-// }
-// async function resumeCommand(textChannel, subscription: Subscription) {
-//     if (subscription) {
-//         subscription.audioPlayer.unpause();
-//         await textChannel.send("The player has resumed.")
-//     } else {
-//         await textChannel.send("I am currently not playing anything.")
-//     }
-// }
-// async function leaveCommand(textChannel: TextChannel, subscription: Subscription) {
-//     if (subscription) {
-//         subscription.voiceConnection.destroy();
-//         subscriptions.delete(textChannel.guildId);
-//         await textChannel.send("I have left the voice channel");
-//     } else {
-//         await textChannel.send("I am currently not in a voice channel.")
-//     }
-// }
+
+async function skipCommand(message) {
+    const queue = distube.getQueue(message)
+    if (!queue) {
+        return
+    }
+    if (!queue.playing) {
+        return
+    }
+    if (queue.songs.length === 1) {
+        await message.channel.send("There is no song up next")
+        return
+    }
+    distube.skip(message).then( async (song) => {
+        await message.channel.send(`Skipped song, next up: ${song.name}`)
+        }
+    )
+}
+
+async function queueCommand(message) {
+    const queue = distube.getQueue(message);
+    if (queue !== undefined) {
+        let queueMessage = ""
+        queue.songs
+        .slice(0,5)
+        .forEach(
+            (song, index) => {
+                queueMessage += `${index + 1}: ${song.name}\n`
+            }
+        );
+        await message.channel.send(queueMessage);
+        return;
+    }
+    await message.channel.send("There is no queue");
+}
+
+async function pauseCommand(message) {
+    const queue = distube.getQueue(message)
+    if (queue && queue.playing) {
+        distube.pause(message)
+        await message.channel.send("Paused the player.")
+        return
+    }
+    await message.channel.send("I am currently not playing anything.")
+}
+
+async function resumeCommand(message) {
+    const queue = distube.getQueue(message)
+    if (queue && queue.paused) {
+        distube.resume(message)
+        await message.channel.send("Resumed the player.")
+        return
+    }
+    await message.channel.send("I am not paused.")
+}
+
+async function leaveCommand(message) { //TODO idk if this is reliable
+    const queue = distube.getQueue(message)
+    if (queue && queue.voice) {
+        queue.voice.leave()
+        await message.channel.send("I have left the voice channel")
+        return
+    }
+    await message.channel.send("I am currently not in a voice channel")
+    // distube.stop(message)
+}
+
+async function stopCommand(message) {
+    const queue = distube.getQueue(message)
+    if (queue && queue.playing) {
+        queue.stop().then(
+            await message.channel.send("Stopped the player")
+        )
+        return
+    }
+    await message.channel.send("I am currently not playing anything.")
+}
 // async function loopCommand(member, textChannel, subscription: Subscription) {
 //     try {
 //         if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
@@ -240,41 +261,82 @@ async function playCommand(member, textChannel, args: string[]) {
 //     }
     
 // }
-// async function lyricsCommand(textChannel, subscription: Subscription) {
-//     if (subscription) {
-//         if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-//             const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;   
-//             const options = {
-//                 apiKey: process.env.GENIUS_SECRET,
-//                 title: m.title,
-//                 artist: m.artist,
-//                 optimizeQuery: true
-//             }
-//             getSong(options).then(async (song) => {
-//                 if (song) {
-//                     const embed = new MessageEmbed()
-//                         .setTitle(`Lyrics for ${m.title} - ${m.artist}`)
-//                         .setDescription(`${song.lyrics}\n${song.url}`)
-//                         .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
-//                     await textChannel.send({embeds: [embed]});
-//                 } else await textChannel.send(`Couldn't find lyrics for ${m.query}`)
-//             })
-//         } else {
-//                 await textChannel.send("Currently not playing anything.");
-//             }
-//     }
-// }
+async function lyricsCommand(message) {
+    // if (subscription) {
+    //     if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+    //         const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;   
+    //         const options = {
+    //             apiKey: process.env.GENIUS_SECRET,
+    //             title: m.title,
+    //             artist: m.artist,
+    //             optimizeQuery: true
+    //         }
+    //         getSong(options).then(async (song) => {
+    //             if (song) {
+    //                 const embed = new MessageEmbed()
+    //                     .setTitle(`Lyrics for ${m.title} - ${m.artist}`)
+    //                     .setDescription(`${song.lyrics}\n${song.url}`)
+    //                     .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
+    //                 await textChannel.send({embeds: [embed]});
+    //             } else await textChannel.send(`Couldn't find lyrics for ${m.query}`)
+    //         })
+    //     } else {
+    //             await textChannel.send("Currently not playing anything.");
+    //         }
+    // }
+    // function commonWords1 (first: string, second: string) {
+    //     // console.log(`1: ${first}`);
+    //     // console.log(`2: ${second}\n`);
+    //     var first = first.replace(/[^\w\s]/gi, '')
+    //     var second = second.replace(/[^\w\s]/gi, '')
+    //     var a = first.split(' ')
+    //     var b = second.split(' ')
+    //     var d = []
+
+    //     for (var i = 0; i < a.length; i++) {
+    //       for (var j = 0; j < b.length; j++) {
+    //             if (a[i].toLowerCase() === b[j].toLowerCase() && d.indexOf(a[i]) !== null) {
+    //                 d.push(a[i])
+    //               }
+    //       }
+    //     }
+    //     return d.join(' ')
+    // }
+    // const queue = distube.getQueue(message)
+    // if (queue && queue.playing){
+
+    // }
+
+}
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         if (!message.content.startsWith(prefix)) return;
         const [command, ...args] = message.content
                 .trim()
                 .substring(prefix.length)
-                .split(/\s+/);
+                .split(/\s+/)
         switch (command) {
             case "play": 
-                playCommand(message.member, message.channel, args);
-                break;
+                playCommand(message.member, message.channel, args)
+                break
+            case "skip":
+                skipCommand(message)
+                break
+            case "queue":
+                queueCommand(message)
+                break
+            case "pause":
+                pauseCommand(message)
+                break
+            case "resume":
+                resumeCommand(message)
+                break
+            case "leave":
+                leaveCommand(message)
+                break
+            case "stop":
+                stopCommand(message)
+                break
             case "help": 
                 const commands = [
                     {
@@ -342,4 +404,14 @@ client.on("messageCreate", async (message) => {
         }   
     }
 })
+
+distube.on("finish", (queue) => { //leave after 10 seconds of not playing
+    leaveTimeout = setTimeout(() => {
+        queue.voice.leave()
+    }, 10000)
+})
+.on("addSong", () => { //if a song is added when we are about to leave 
+    clearTimeout(leaveTimeout)
+})
+
 client.login(process.env.DISCORD_TOKEN);
