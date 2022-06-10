@@ -1,12 +1,14 @@
 require('dotenv').config();
 //TODO last.fm api?
 import { AudioPlayerStatus, AudioResource, DiscordGatewayAdapterCreator, entersState, joinVoiceChannel, VoiceConnectionStatus } from '@discordjs/voice';
-import { Client, GuildMember, Intents, Snowflake, TextChannel, MessageEmbed } from 'discord.js';
+import { Client, GuildMember, Intents, Snowflake, TextChannel, MessageEmbed, ReactionUserManager } from 'discord.js';
 // import { Subscription } from './classes/subscription';
 // import { Track } from './classes/track';
 import SpotifyWebApi from "spotify-web-api-node";
 import { getSong } from 'genius-lyrics-api';
 import { DisTube } from 'distube';
+import { video_info } from 'play-dl'
+const fs = require('fs')
 // import songlyrics from 'songlyrics' not working as i would like yet
 
 let leaveTimeout;
@@ -68,13 +70,20 @@ client.on('ready', () => {
 // const subscriptions = new Map<Snowflake, Subscription>();
 
 async function playCommand(member, textChannel, args: string[]) {
-    console.log("Play command triggered");
+    // console.log("Play command triggered");
     if (member instanceof GuildMember && member.voice.channel) {
-        const channel = member.voice.channel;
+        const channel = member.voice.channel
+        const queue = distube.getQueue(textChannel)
+        const wasPlaying = queue ? queue.playing : false
         distube.play(channel, args.join(" "), {
             textChannel: textChannel,
             member: member
+        }).then( async () => {
+            const queue = distube.getQueue(textChannel)
+            if (wasPlaying) await textChannel.send(`Added to queue: ${queue.songs[queue.songs.length -1].name}`)
+            else await textChannel.send(`Now playing ${queue.songs[0].name}`)
         })
+
         return;
     }
     await textChannel.send("Please join a voice channel!");
@@ -262,52 +271,47 @@ async function stopCommand(message) {
     
 // }
 async function lyricsCommand(message) {
-    // if (subscription) {
-    //     if (subscription.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-    //         const m = (subscription.audioPlayer.state.resource as AudioResource<Track>).metadata;   
-    //         const options = {
-    //             apiKey: process.env.GENIUS_SECRET,
-    //             title: m.title,
-    //             artist: m.artist,
-    //             optimizeQuery: true
-    //         }
-    //         getSong(options).then(async (song) => {
-    //             if (song) {
-    //                 const embed = new MessageEmbed()
-    //                     .setTitle(`Lyrics for ${m.title} - ${m.artist}`)
-    //                     .setDescription(`${song.lyrics}\n${song.url}`)
-    //                     .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
-    //                 await textChannel.send({embeds: [embed]});
-    //             } else await textChannel.send(`Couldn't find lyrics for ${m.query}`)
-    //         })
-    //     } else {
-    //             await textChannel.send("Currently not playing anything.");
-    //         }
-    // }
-    // function commonWords1 (first: string, second: string) {
-    //     // console.log(`1: ${first}`);
-    //     // console.log(`2: ${second}\n`);
-    //     var first = first.replace(/[^\w\s]/gi, '')
-    //     var second = second.replace(/[^\w\s]/gi, '')
-    //     var a = first.split(' ')
-    //     var b = second.split(' ')
-    //     var d = []
+    const queue = distube.getQueue(message)
+    if (queue && queue.playing){
+        const current = queue.songs[0]
+        let title, artist
+        video_info(current.url).then( (data) => {
+            if (data.video_details.music.length === 0) {
+                title = data.video_details.title
+                artist = data.video_details.channel.name
+                
+            }
+            title = typeof data.video_details.music[0].song === 'string' ? data.video_details.music[0].song : data.video_details.music[0].song.text
+            artist = typeof data.video_details.music[0].artist === 'string' ? data.video_details.music[0].artist : data.video_details.music[0].artist.text
+            
+            // console.log(title, artist)
 
-    //     for (var i = 0; i < a.length; i++) {
-    //       for (var j = 0; j < b.length; j++) {
-    //             if (a[i].toLowerCase() === b[j].toLowerCase() && d.indexOf(a[i]) !== null) {
-    //                 d.push(a[i])
-    //               }
-    //       }
-    //     }
-    //     return d.join(' ')
-    // }
-    // const queue = distube.getQueue(message)
-    // if (queue && queue.playing){
-
-    // }
-
+            const options = {
+                apiKey: process.env.GENIUS_SECRET,
+                title: title,
+                artist: artist,
+                optimizeQuery: true
+                }
+            getSong(options).then(async (song) => {
+                if (song) {
+                    try {
+                        const embed = new MessageEmbed()
+                        .setTitle(`Lyrics for ${title} - ${artist}`)
+                        .setDescription(`${song.lyrics}\n${song.url}`)
+                        .setFooter({text: "Lyrics provided by Genius", iconURL: "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"});
+                    await message.channel.send({embeds: [embed]});
+                    }
+                    catch (err){
+                        message.channel.send(`The lyrics were too long, so here is the url: ${song.url}`)
+                        // console.log((song.lyrics as string).length)
+                    }
+                } else await message.channel.send(`Couldn't find lyrics for ${title}`)
+            })
+        })
+    }
+    else await message.channel.send("Currently not playing anything.");   
 }
+
 client.on("messageCreate", async (message) => {
     if (!message.author.bot) {
         if (!message.content.startsWith(prefix)) return;
@@ -336,6 +340,9 @@ client.on("messageCreate", async (message) => {
                 break
             case "stop":
                 stopCommand(message)
+                break
+            case "lyrics":
+                lyricsCommand(message)
                 break
             case "help": 
                 const commands = [
