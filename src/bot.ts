@@ -238,7 +238,6 @@ async function playListCommand(url: string, member, textChannel, subscription: S
     }
  
     spotify.getPlaylistTracks(id).then((data) => {
-
         data.body.items.forEach(async (item) => {
             const artistsList = [];
             item.track.artists.forEach((artist) => {
@@ -246,8 +245,11 @@ async function playListCommand(url: string, member, textChannel, subscription: S
             })
             const query = `${artistsList.join(", ")} ${item.track.name} `
             try {
-                const track = await Track.from(query, member, textChannel);
-                subscription.enqueue(track);
+                Track.from(query, member, textChannel).then( (track) => {
+                    if (track) subscription.enqueue(track)
+                })
+                // console.log(track.title)
+                // subscription.enqueue(track);
             } catch (error) {
                 await textChannel.send(`Failed to play ${item.track.name}, maybe it's explicit?`);
                 console.error(error);

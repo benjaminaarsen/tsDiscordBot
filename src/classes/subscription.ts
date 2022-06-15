@@ -116,6 +116,7 @@ export class Subscription {
      */
     public enqueue(track: Track) {
         this.queue.push(track);
+		console.log(this.queue)
         void this.processQueue();
     }
 
@@ -132,6 +133,7 @@ export class Subscription {
      * Attempts to play a Track from the queue
      */
     private async processQueue(): Promise<void> {
+		// console.log(this.queue)
         if (this.queueLock || this.audioPlayer.state.status !== AudioPlayerStatus.Idle || this.queue.length === 0) {
             return;
         }
@@ -160,9 +162,6 @@ export class Subscription {
 			return this.processQueue();
 		} else {
 			this.voiceConnection.destroy();
-		}
-		
-			
-			
+		}	
     }
 }
